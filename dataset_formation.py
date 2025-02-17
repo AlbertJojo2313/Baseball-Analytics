@@ -4,6 +4,8 @@ import pandas as pd
 # Create a lookup dictionary for player names
 def create_player_lookup():
     player_data = playerid_reverse_lookup(range(1000000), key_type='mlbam')  # Large range to fetch all players
+    player_data['name_first'] = player_data['name_first'].str.capitalize()
+    player_data['name_last'] = player_data['name_last'].str.capitalize()
     player_data['full_name'] = player_data['name_first'] + " " + player_data['name_last']
     return player_data.set_index('key_mlbam')['full_name'].to_dict()
 
