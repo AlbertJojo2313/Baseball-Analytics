@@ -32,7 +32,7 @@ def request(start_dt, end_dt):
     """Fetch Statcast data and process batter names and depth values."""
     df = statcast(start_dt=start_dt, end_dt=end_dt)
 
-    required_columns = ['batter', 'if_fielding_alignment', 'of_fielding_alignment']
+    required_columns = ['batter', 'if_fielding_alignment', 'of_fielding_alignment', 'woba_value', 'woba_denom', 'iso_value']
     if not all(col in df.columns for col in required_columns):
         print("Warning: Some expected columns are missing.")
         return df  
@@ -43,9 +43,11 @@ def request(start_dt, end_dt):
     df_filtered['batter_name'] = df_filtered['batter'].apply(get_batter_name)
 
     # Assign numerical depth values based on alignments
-    df_filtered['if_fielding_depth'] = df_filtered['if_fielding_alignment'].map(INFIELD_DEPTH_MAP).fillna(0)
-    df_filtered['of_fielding_depth'] = df_filtered['of_fielding_alignment'].map(OUTFIELD_DEPTH_MAP).fillna(0)
+    df_filtered['if_fielding_depth'] = df_filtered['if_fielding_alignment'].map(INFIELD_DEPTH_MAP).fillna(0).astype(int)
+    df_filtered['of_fielding_depth'] = df_filtered['of_fielding_alignment'].map(OUTFIELD_DEPTH_MAP).fillna(0).astype(int)
 
+    df_filtered = df_filtered.rename(columns={"woba_value":"wOBA", "woba_denom":"wOBA_Denom", "iso_value":"ISO"})
+    
     # Remove duplicates
     df_filtered = df_filtered.drop_duplicates()
 
