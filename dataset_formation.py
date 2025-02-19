@@ -34,6 +34,10 @@ def request(start_dt, end_dt):
     """Fetch Statcast data and process batter names and depth values."""
     df = statcast(start_dt=start_dt, end_dt=end_dt)
 
+    if df.empty:
+        print("No data found for this given range")
+        return df ## Returns an empty dataframe
+
     required_columns = ['batter', 'if_fielding_alignment', 'of_fielding_alignment', 'woba_value', 'woba_denom', 'iso_value']
     if not all(col in df.columns for col in required_columns):
         print("Warning: Some expected columns are missing.")
@@ -49,9 +53,9 @@ def request(start_dt, end_dt):
     df_filtered['of_fielding_depth'] = df_filtered['of_fielding_alignment'].map(OUTFIELD_DEPTH_MAP).fillna(0).astype(int)
 
     df_filtered = df_filtered.rename(columns={"woba_value":"wOBA", "woba_denom":"wOBA_Denom", "iso_value":"ISO"})
-    
+
     # Remove duplicates
-    df_filtered = df_filtered.drop_duplicates()
+    df_filtered = df_filtered.drop_duplicates(subset=['batter'])
 
     return df_filtered
 
