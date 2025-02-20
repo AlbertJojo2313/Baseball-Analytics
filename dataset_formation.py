@@ -6,7 +6,7 @@ def create_player_lookup():
     player_data = playerid_reverse_lookup(range(1000000), key_type='mlbam')  # Large range to fetch all players
     player_data['name_first'] = player_data['name_first'].str.capitalize()
     player_data['name_last'] = player_data['name_last'].str.capitalize()
-    player_data['full_name'] = player_data['name_first'] + " " + player_data['name_last']
+    player_data['full_name'] = player_data['name_last'] + "," + player_data['name_first']
     return player_data.set_index('key_mlbam')['full_name'].to_dict()
 
 PLAYER_LOOKUP = create_player_lookup()
@@ -30,6 +30,12 @@ def get_batter_name(batter_id):
     """Retrieve player name using a preloaded dictionary."""
     return PLAYER_LOOKUP.get(batter_id, "Unknown Player")
 
+def get_pitcher_name(pitcher_id):
+    return PLAYER_LOOKUP.get(pitcher_id, "Unkown Player")
+
+def get_fielder_name(fielder_id):
+    return PLAYER_LOOKUP.get(fielder_id, "Unkown Player")
+    
 def request(start_dt, end_dt):
     """Fetch Statcast data and process batter names and depth values."""
     df = statcast(start_dt=start_dt, end_dt=end_dt)
@@ -38,15 +44,32 @@ def request(start_dt, end_dt):
         print("No data found for this given range")
         return df ## Returns an empty dataframe
 
-    required_columns = ['batter', 'if_fielding_alignment', 'of_fielding_alignment', 'woba_value', 'woba_denom', 'iso_value']
+    required_columns = ['batter', 'stand', 'if_fielding_alignment', 'of_fielding_alignment','pitcher', 'fielder_2','fielder_3','fielder_4','fielder_5','fielder_6','fielder_7','fielder_8','fielder_9', 'woba_value', 'woba_denom', 'iso_value']
+
     if not all(col in df.columns for col in required_columns):
         print("Warning: Some expected columns are missing.")
         return df  
 
     df_filtered = df[required_columns].copy()
+    df_filtered['pitcher'] = df_filtered['pitcher'].apply(get_pitcher_name)
+
+    filter_cols = ['fielder_2','fielder_3','fielder_4','fielder_5','fielder_6','fielder_7','fielder_8','fielder_9']
 
     # Map batter ID to player name
     df_filtered['batter_name'] = df_filtered['batter'].apply(get_batter_name)
+    #df_filtered['pitcher_name'] = df_filtered['pitcher'].apply(get_pitcher_name)
+    """
+    df_filtered['fielder_2'] = df_filtered['fielder_2'].apply(get_fielder_name)
+    df_filtered['fielder_3'] = df_filtered['fielder_3'].apply(get_fielder_name)
+    df_filtered['fielder_4'] = df_filtered['fielder_4'].apply(get_fielder_name)
+    df_filtered['fielder_5'] = df_filtered['fielder_5'].apply(get_fielder_name)
+    df_filtered['fielder_6'] = df_filtered['fielder_6'].apply(get_fielder_name)
+    df_filtered['fielder_7'] = df_filtered['fielder_7'].apply(get_fielder_name)
+    df_filtered['fielder_8'] = df_filtered['fielder_8'].apply(get_fielder_name)
+    df_filtered['fielder_9'] = df_filtered['fielder_9'].apply(get_fielder_name)
+    """
+    for col in filter_cols:
+        df_filtered[col] = df_filtered[col].apply(get_fielder_name)
 
     # Assign numerical depth values based on alignments
     df_filtered['if_fielding_depth'] = df_filtered['if_fielding_alignment'].map(INFIELD_DEPTH_MAP).fillna(0).astype(int)
@@ -85,8 +108,8 @@ def write_df_to_file(df: pd.DataFrame, filename: str, fileformat: str = 'csv'):
         print(f"Error writing the file: {e}")
 
 def main():
-    start_dt = "2024-06-01"
-    end_dt = "2024-06-02"
+    start_dt = "2022-04-07"
+    end_dt = "2024-09-29"
 
     df = request(start_dt=start_dt, end_dt=end_dt)
 
