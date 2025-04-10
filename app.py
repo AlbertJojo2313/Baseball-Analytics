@@ -1,0 +1,100 @@
+from shiny.express import input, render, ui
+from shared import pbp, batters
+import numpy as np
+
+ui.tags.style(':root { --bs-primary-rgb:58, 144, 152; }')
+
+with ui.h2():
+    "Batter Effectiveness vs. Strategic Fielder Positioning"
+
+with ui.layout_columns(): 
+    with ui.card():
+        ui.card_header('wOBA', class_='bg-primary lead')
+        @render.text
+        def text0():
+            try:
+                df = pbp.loc[int(input.batter()), str(input.if_alignment()), str(input.of_alignment())]
+                return str(round(df['wOBA'].mean(), 3))
+            except:
+                return
+    with ui.card():
+        ui.card_header('Change in wOBA From Standard Alignment', class_='bg-primary lead')
+        @render.text
+        def text1():
+            try:
+                st =  pbp.loc[int(input.batter()), 'st', 'st']
+                df = pbp.loc[int(input.batter()), str(input.if_alignment()), str(input.of_alignment())]
+                st_woba = st['wOBA'].mean()
+                return str(round(st_woba - df['wOBA'].mean(), 3))
+            except:
+                return
+    with ui.card():
+        ui.card_header('At Bats', class_='bg-primary lead')
+        @render.text
+        def text2():
+            try:
+                df = pbp.loc[int(input.batter()), str(input.if_alignment()), str(input.of_alignment())]
+                return str(len(df))
+            except:
+                return
+
+
+with ui.card():
+    ui.card_header('Heatmap', class_='bg-primary lead')
+    @render.plot
+    def plot():
+        import matplotlib.pyplot as plt
+
+        fig = plt.figure()
+        ax = fig.add_subplot(projection='polar')
+        ax.set_theta_zero_location('N')
+        ax.set_thetamin(-45)
+        ax.set_thetamax(45)
+        ax.set_rlim(0, 450)
+        ax.grid(visible=False)
+        ax.set_xticklabels([])
+
+        try:
+            df = pbp.loc[int(input.batter()), str(input.if_alignment()), str(input.of_alignment())]
+
+            pos_r = (list(df.loc[:, 'fielder_3_r']) +
+                list(df.loc[:, 'fielder_4_r']) +
+                list(df.loc[:, 'fielder_5_r']) +
+                list(df.loc[:, 'fielder_6_r']) +
+                list(df.loc[:, 'fielder_7_r']) +
+                list(df.loc[:, 'fielder_8_r']) +
+                list(df.loc[:, 'fielder_9_r']))
+
+            pos_a = (list(df.loc[:, 'fielder_3_a']) +
+                list(df.loc[:, 'fielder_4_a']) +
+                list(df.loc[:, 'fielder_5_a']) +
+                list(df.loc[:, 'fielder_6_a']) +
+                list(df.loc[:, 'fielder_7_a']) +
+                list(df.loc[:, 'fielder_8_a']) +
+                list(df.loc[:, 'fielder_9_a']))
+            
+            hit_x = df['hc_x'] - 115
+            hit_y = df['hc_y'] - 215
+
+            hit_a = np.arctan(hit_x / hit_y)
+            hit_r = df['hit_distance_sc']
+
+            ax.scatter(hit_a, hit_r, s=4)
+            ax.scatter(pos_a, pos_r)
+        except:
+            pass
+        return fig
+
+with ui.sidebar(bg='#3a9098', fg='#ffffff'):
+    ui.input_select(
+        'batter', 'Select Batter',
+        choices=batters
+    ),
+    ui.input_radio_buttons(
+        'if_alignment', 'Infielder Alignment',
+        choices={'st':'Standard', 'sh':'Shifted'}
+    ),
+    ui.input_radio_buttons(
+        'of_alignment', 'Outfielder Alignment',
+        choices={'st':'Standard', 'sh':'Shaded'}
+    )
